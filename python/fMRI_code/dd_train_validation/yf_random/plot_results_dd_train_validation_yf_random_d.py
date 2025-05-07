@@ -1,7 +1,7 @@
 import numpy as np
 import random
 import matplotlib.pyplot as plt
-from fMRI_code.dd_train_validation.create_U_train_Yf_train import create_U_train_Yf_train
+from python.fMRI_code.dd_train_validation.create_U_train_Yf_train import create_U_train_Yf_train
 from fMRI_dd_train_validation_yf_random import fMRI_dd_train_validation_yf_random
 
 # Number of subjects for train
@@ -128,4 +128,18 @@ plt.show()
 # Overall box plot of the N subjects (for data-driven train-validation energy)
 plt.boxplot(control_energy_dd_train_tot.flatten())
 plt.title("control_energy_dd_train_tot_flatten")
+plt.show()
+
+# Box plot comparing err_dd_tot.flatten() and err_dd_train_tot.flatten() in the same figure
+plt.figure(figsize=(6, 5))
+plt.boxplot([err_dd_tot.flatten(), err_dd_train_tot.flatten()], tick_labels=["DD", "DD_train_validation"])
+plt.title("err_dd_tot vs err_dd_train_tot")
+plt.ylabel("Error")
+plt.show()
+
+# Box plot comparing control_energy_dd_tot_flatten and control_energy_dd_train_tot_flatten in the same figure
+plt.figure(figsize=(6, 5))
+plt.boxplot([control_energy_dd_tot.flatten(), control_energy_dd_train_tot.flatten()], tick_labels=["DD", "DD_train_validation"])
+plt.title("control_energy_dd_tot_flatten vs control_energy_dd_train_tot_flatten")
+plt.ylabel("Control energy")
 plt.show()

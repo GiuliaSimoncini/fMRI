@@ -112,3 +112,17 @@ plt.show()
 plt.boxplot(control_energy_dd_tot.flatten())
 plt.title("control_energy_dd_tot_flatten")
 plt.show()
+
+# Box plot comparing err_mb_tot.flatten() and err_dd_tot.flatten() in the same figure
+plt.figure(figsize=(6, 5))
+plt.boxplot([err_mb_tot.flatten(), err_dd_tot.flatten()], tick_labels=["MB", "DD"])
+plt.title("err_mb_tot vs err_dd_tot")
+plt.ylabel("Error")
+plt.show()
+
+# Box plot comparing control_energy_mb_tot_flatten and control_energy_mb_tot_flatten in the same figure
+plt.figure(figsize=(6, 5))
+plt.boxplot([control_energy_mb_tot.flatten(), control_energy_dd_tot.flatten()], tick_labels=["MB", "DD"])
+plt.title("control_energy_mb_tot_flatten vs control_energy_dd_tot_flatten")
+plt.ylabel("Control energy")
+plt.show()
