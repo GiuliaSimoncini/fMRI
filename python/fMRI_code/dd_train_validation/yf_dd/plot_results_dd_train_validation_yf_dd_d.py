@@ -1,7 +1,7 @@
 import numpy as np
 import random
 import matplotlib.pyplot as plt
-from fMRI_code.dd_train_validation.create_U_train_Yf_train import create_U_train_Yf_train
+from python.fMRI_code.dd_train_validation.create_U_train_Yf_train import create_U_train_Yf_train
 from fMRI_dd_train_validation_yf_dd import fMRI_dd_train_validation_yf_dd
 
 # Number of subjects for train
