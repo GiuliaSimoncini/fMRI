@@ -1,0 +1,165 @@
+function [] = fMRI_save_matrices(subject_id)
+%% Directory for saving matrices
+output_dir = ['../csv/' num2str(subject_id)];
+
+% Create the directory if it doesn't exist
+if ~exist(output_dir, 'dir')
+    mkdir(output_dir);
+end
+
+%% Parameters
+r = 148;        % number of brain regions
+L = 284;        % total time horizon
+T = 100;        % control horizon
+T_est = 150;    % estimation horizon
+m = 6;          % number of inputs
+p = 148;        % number of outputs
+
+% filter design parameters
+A_stop1 = 20;		% Attenuation in the first stopband [Hz]
+F_stop1 = 0.04;		% Edge of the stopband [Hz]
+F_pass1 = 0.06; 	% Edge of the passband [Hz]
+F_pass2 = 0.12;     % Closing edge of the passband [Hz]
+F_stop2 = 0.15;     % Edge of the second stopband [Hz]
+A_stop2 = 20;		% Attenuation in the second stopband [Hz]
+A_pass  = 1;        % Amount of ripple allowed in the passband [Hz]
+
+%% Construct data matrices
+
+% data for data-driven control
+U   = [];
+Yf  = [];
+
+% data for system identification
+Ui = [];
+Yi = [];
+
+% load data of subject subject_id
+BOLD    = ['fMRI_data/data/bold_' num2str(subject_id) '.txt'];
+CUES    = ['fMRI_data/data/cues_' num2str(subject_id) '.txt'];
+HEART   = ['fMRI_data/data/heart_' num2str(subject_id) '.txt'];
+RESP    = ['fMRI_data/data/resp_' num2str(subject_id) '.txt'];
+
+% crop data to interval [1,284]
+outputs = load(BOLD);
+outputs = outputs(:,1:284);
+inputs  = load(CUES);
+heart   = load(HEART)';
+heart   = heart(1:284);
+resp    = load(RESP)';
+resp    = resp(1:284);
+
+% encode visual cues
+inputs(6,12)  = 1; inputs(6,33)  = 1; inputs(6,54)  = 1; inputs(6,75)  = 1;
+inputs(6,96)  = 1; inputs(6,138) = 1; inputs(6,159) = 1; inputs(6,180) = 1;
+inputs(6,221) = 1; inputs(6,242) = 1;
+
+% rearrange inputs: 1) CUE 2) LF 3) LH 4) RF 5) RH 6) T
+inputs = inputs([6 4 3 2 5 1],1:284);
+
+% physiological signals
+U_P = [heart; resp];
+
+% physiologically regressed outputs
+outputs_r = outputs*(eye(L)-pinv(U_P)*U_P);
+
+% band-pass filter
+Hd = fdesign.bandpass('N,Fst1,Fp1,Fp2,Fst2',50,F_stop1,F_pass1,F_pass2,F_stop2);
+d  = design(Hd,'equiripple');
+
+% filtered outputs
+outputs_rf = filter(d,outputs_r');
+outputs_rf = outputs_rf';
+
+inputs_tmp = [zeros(m,T-10),inputs];
+outputs_tmp = [zeros(p,T-10),outputs_rf];
+
+Yi = reshape(outputs_rf(:,1:T_est),[],1);
+Ui = reshape(inputs(:,1:T_est),[],1);
+
+for t_s =1:T
+    inputs_sel = flip(inputs_tmp(:,t_s:t_s+T-1),2);
+    inputs_r = reshape(inputs_sel,[],1);
+    U = [U inputs_r];
+    Yf = [Yf outputs_tmp(:,t_s+T)];
+end
+
+Y = [];
+for t_s =1:T
+    outputs_sel = flip(outputs_tmp(:,t_s:t_s+T-1),2);
+    outputs_r = reshape(outputs_sel,[],1);
+    Y = [Y outputs_r];
+end
+
+Y = Y(149:end, :);
+%% Model identification
+
+% subspace identification parameters
+s = 3;
+len = T_est+1-s;
+Yh = zeros(s*p,len);
+Uh = zeros(s*m,len);
+
+% convert data in Hankel form
+Y_tmp = Yi;
+U_tmp = Ui;
+
+for j = 1:len
+    Yh(:,j) = Y_tmp(1+p*(j-1):p*(j-1)+s*p);
+    Uh(:,j) = U_tmp(1+m*(j-1):m*(j-1)+s*m);
+end
+
+Uperp = eye(len) - Uh'*pinv(Uh*Uh')*Uh;
+M = Yh*Uperp;
+[Us,Sigma,Vs] = svd(M);
+
+% select model order
+nr = 20;
+
+% extended observability estimate
+Un = Us(:,1:nr);
+
+% estimate A matrix
+Aest = pinv(Un(1:p*(s-1),1:nr))*Un((p+1):p*s,1:nr);
+
+% enforce stability of A
+if max(abs(eig(Aest)))>1
+    Aest = Aest/(max(abs(eig(Aest)))+1e-2);
+end
+
+% estimate C matrix
+Cest = Un(1:p,1:nr);
+
+% compute matrix K
+  
+Y_tmp = Yi;
+U_tmp = Ui;
+K = [];
+
+for j = 1:T_est
+    
+    K_tmp = zeros(p,nr*m);
+    
+    if j ~= 1
+        for r = 2:j
+            K_tmp = K_tmp+kron(U_tmp(m*(r-2)+1:m*(r-1))',Cest*Aest^(j-r));
+        end
+    end
+    
+    K = [K; K_tmp];
+end
+
+Yh_tot = Y_tmp;
+
+% estimate B matrix
+gamma = 5; % regularization parameter
+Best = inv(K'*K+gamma*eye(m*nr))*K'*Yh_tot;
+Best = reshape(Best,[nr,m]);
+
+%% Write matrices in csv
+writematrix(Aest, fullfile(output_dir, 'Aest.csv'));
+writematrix(Best, fullfile(output_dir, 'Best.csv'));
+writematrix(Cest, fullfile(output_dir, 'Cest.csv'));
+writematrix(U, fullfile(output_dir, 'U.csv'));
+writematrix(Yf, fullfile(output_dir, 'Yf.csv'));
+writematrix(Y, fullfile(output_dir, 'Y.csv'));
