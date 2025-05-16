@@ -27,10 +27,10 @@ Ui = [];
 Yi = [];
 
 % load data of subject subject_id
-BOLD    = ['./fMRI_data/bold_' num2str(subject_id) '.txt'];
-CUES    = ['./fMRI_data/cues_' num2str(subject_id) '.txt'];
-HEART   = ['./fMRI_data/heart_' num2str(subject_id) '.txt'];
-RESP    = ['./fMRI_data/resp_' num2str(subject_id) '.txt'];
+BOLD    = ['fMRI_data/data/bold_' num2str(subject_id) '.txt'];
+CUES    = ['fMRI_data/data/cues_' num2str(subject_id) '.txt'];
+HEART   = ['fMRI_data/data/heart_' num2str(subject_id) '.txt'];
+RESP    = ['fMRI_data/data/resp_' num2str(subject_id) '.txt'];
 
 % crop data to interval [1,284]
 outputs = load(BOLD);
